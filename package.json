@@ -1,26 +1,26 @@
 {
   "name": "@ax-design/typed-om",
-  "version": "0.0.0",
-  "description": "Typed reads and change detection for CSS custom properties, down to browsers without CSS Typed OM or @property.",
+  "version": "0.1.0",
+  "description": "Typed reads and change detection for CSS custom properties, for browsers with or without CSS Typed OM and @property.",
+  "keywords": [
+    "css",
+    "custom-properties",
+    "typed-om",
+    "houdini"
+  ],
+  "homepage": "https://github.com/ax-design/typed-om#readme",
+  "bugs": {
+    "url": "https://github.com/ax-design/typed-om/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ax-design/typed-om.git"
+  },
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "sideEffects": false,
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "bun test",
-    "test:browser": "bun test-browser/run.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "playwright": "^1.64.0",
-    "typescript": "^5.6.0"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -28,5 +28,23 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/test-utils.ts"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "bun test",
+    "test:browser": "bun test-browser/run.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "playwright": "^1.64.0",
+    "typescript": "^5.6.0"
   }
 }
