@@ -1,0 +1,21 @@
+{
+  "name": "@ax-design/typed-om",
+  "version": "0.0.0",
+  "description": "Typed reads and change detection for CSS custom properties, down to browsers without CSS Typed OM or @property.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "bun test",
+    "test:browser": "bun test-browser/run.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "playwright": "^1.64.0",
+    "typescript": "^5.6.0"
+  }
+}
