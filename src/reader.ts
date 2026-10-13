@@ -13,10 +13,15 @@ export interface ReadStats {
 export class StyleReader {
     readonly schema: PropertySpec[];
     private initials: PropertyValue[];
+    // Index of the gate property and its skip values, per property.
+    private gates: ({ index: number; values: string[] } | null)[];
 
     constructor(schema: PropertySpec[]) {
         this.schema = schema;
         this.initials = schema.map((spec) => parseFast(spec, spec.initial));
+        const index: { [name: string]: number } = {};
+        schema.forEach((spec, i) => (index[spec.name] = i));
+        this.gates = schema.map((spec) => (spec.skipWhen ? { index: index[spec.skipWhen.property], values: spec.skipWhen.values } : null));
     }
 
     read(element: Element, probeParent: Node, out: PropertyValue[] = [], stats?: ReadStats): PropertyValue[] {
@@ -24,6 +29,11 @@ export class StyleReader {
         let slow = 0;
         for (let i = 0; i < this.schema.length; i++) {
             const spec = this.schema[i];
+            const gate = this.gates[i];
+            if (gate && gate.values.indexOf(out[gate.index] as string) >= 0) {
+                out[i] = this.initials[i];
+                continue;
+            }
             const text = style.getPropertyValue(spec.name).trim();
             if (text === '') {
                 out[i] = this.initials[i];

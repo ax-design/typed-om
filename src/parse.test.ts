@@ -70,3 +70,14 @@ describe('keywords', () => {
         expect(() => validateSchema([{ name: 'k', syntax: { type: 'number' }, initial: '0', inherits: false }])).toThrow();
     });
 });
+
+describe('skipWhen', () => {
+    test('gate must come first', () => {
+        expect(() =>
+            validateSchema([
+                { name: '--depth', syntax: { type: 'length' }, initial: '0px', inherits: false, skipWhen: { property: '--kind', values: ['flat'] } },
+                { name: '--kind', syntax: { type: 'keyword', values: ['flat', 'arc'] }, initial: 'flat', inherits: false },
+            ])
+        ).toThrow();
+    });
+});

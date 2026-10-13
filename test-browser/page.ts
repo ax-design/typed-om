@@ -105,8 +105,24 @@ async function suite(prefix: string, register: boolean, checks: Check[]) {
     checks.push({ name: `${label} detector removed`, ok: root.querySelector('style') === null, detail: '' });
 }
 
+async function skipSuite(checks: Check[]) {
+    const schema = new StyleSchema([
+        { name: '--s-kind', syntax: { type: 'keyword', values: ['flat', 'arc'] }, initial: 'flat', inherits: false },
+        { name: '--s-depth', syntax: { type: 'length' }, initial: '0px', inherits: false, skipWhen: { property: '--s-kind', values: ['flat'] } },
+    ]);
+    const { host, root } = makeHost();
+    const binding = new StyleBinding(schema, host, root);
+    host.style.setProperty('--s-depth', '5px');
+    binding.read();
+    checks.push({ name: 'skipWhen keeps the initial value', ok: binding.get('--s-depth') === 0, detail: String(binding.get('--s-depth')) });
+    host.style.setProperty('--s-kind', 'arc');
+    binding.read();
+    checks.push({ name: 'skipWhen reads once the gate opens', ok: binding.get('--s-depth') === 5, detail: String(binding.get('--s-depth')) });
+}
+
 async function run() {
     const checks: Check[] = [];
+    await skipSuite(checks);
     await suite('t', false, checks);
     await suite('r', true, checks);
     return { userAgent: navigator.userAgent, canRegister: typeof CSS !== 'undefined' && 'registerProperty' in CSS, checks };

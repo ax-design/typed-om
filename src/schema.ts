@@ -17,6 +17,10 @@ export interface PropertySpec {
     inherits: boolean;
     // Register with CSS.registerProperty where available, so author transitions interpolate.
     register?: boolean;
+    // Skip reading this property (it keeps its initial value) when an earlier property in the
+    // schema holds one of these keywords. Saves reads for properties that cannot matter, such as
+    // the size of an edge feature on a flat edge.
+    skipWhen?: { property: string; values: string[] };
 }
 
 export interface LengthPercentage {
@@ -32,7 +36,12 @@ export type PropertyValue = LengthPercentage | number | string | Rgba | null;
 const RESERVED = ['none', 'initial', 'inherit', 'unset', 'revert', 'revert-layer', 'default'];
 
 export function validateSchema(schema: PropertySpec[]): void {
+    const seen: string[] = [];
     for (const spec of schema) {
+        if (spec.skipWhen && seen.indexOf(spec.skipWhen.property) < 0) {
+            throw new Error(`${spec.name}: skipWhen refers to ${spec.skipWhen.property}, which must come earlier in the schema`);
+        }
+        seen.push(spec.name);
         if (spec.name.indexOf('--') !== 0) throw new Error(`${spec.name} is not a custom property name`);
         if (spec.syntax.type !== 'keyword') continue;
         for (const value of spec.syntax.values) {
