@@ -5,9 +5,10 @@ export type PropertySyntax =
     | { type: 'number' }
     // `keywords`: extra identifiers the property may hold instead of a color (returned as strings).
     | { type: 'color'; keywords?: string[] }
-    // Allowed values. Must not contain `none` or CSS-wide keywords: the keyword detector maps
-    // values to animation names, and `none` there means "no animation", so a change to `none`
-    // would go unnoticed.
+    // Allowed values. CSS-wide keywords are rejected. `none` is allowed for existing APIs, but
+    // the keyword detector maps values to animation names, where `none` means "no animation":
+    // a change *to* `none` is not seen by the detector (callers with other triggers are fine).
+    // New schemas should avoid it.
     | { type: 'keyword'; values: string[] };
 
 export interface PropertySpec {
@@ -34,7 +35,7 @@ export type Rgba = [number, number, number, number];
 
 export type PropertyValue = LengthPercentage | number | string | Rgba | null;
 
-const RESERVED = ['none', 'initial', 'inherit', 'unset', 'revert', 'revert-layer', 'default'];
+const RESERVED = ['initial', 'inherit', 'unset', 'revert', 'revert-layer', 'default'];
 
 export function validateSchema(schema: PropertySpec[]): void {
     const seen: string[] = [];

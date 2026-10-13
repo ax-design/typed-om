@@ -65,7 +65,7 @@ describe('keywords', () => {
     });
 
     test('schema rejects keywords the detector cannot observe', () => {
-        expect(() => validateSchema([{ name: '--k', syntax: { type: 'keyword', values: ['flat', 'none'] }, initial: 'flat', inherits: false }])).toThrow();
+        expect(() => validateSchema([{ name: '--k', syntax: { type: 'keyword', values: ['flat', 'inherit'] }, initial: 'flat', inherits: false }])).toThrow();
         expect(() => validateSchema([{ name: '--k', syntax: { type: 'keyword', values: ['flat', 'arc'] }, initial: 'flat', inherits: false }])).not.toThrow();
         expect(() => validateSchema([{ name: 'k', syntax: { type: 'number' }, initial: '0', inherits: false }])).toThrow();
     });

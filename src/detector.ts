@@ -95,6 +95,8 @@ export function buildDetector(schema: PropertySpec[], registered: Set<string> = 
         const names = new Set<string>();
         for (const spec of keywords) if (spec.syntax.type === 'keyword') for (const v of spec.syntax.values) names.add(v);
         names.add(KEYFRAMES_UNSET);
+        // `none` cannot name keyframes; values switching to it are not observed (see schema.ts).
+        names.delete('none');
         names.forEach((n) => rules.push(`@keyframes ${n} {}`));
         const list = keywords.map((spec) => `var(${source(spec)}, ${KEYFRAMES_UNSET})`);
         elements[0].decls.push(`animation-name: ${list.join(', ')}; animation-duration: 1ms;`);
