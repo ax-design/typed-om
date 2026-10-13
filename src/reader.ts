@@ -60,6 +60,7 @@ function parseFast(spec: PropertySpec, text: string): PropertyValue {
         case 'number':
             return parseNumber(text);
         case 'color':
+            if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;
             return parseColor(text);
         case 'keyword':
             return parseKeyword(text, spec.syntax.values);

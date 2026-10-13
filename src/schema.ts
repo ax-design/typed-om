@@ -3,7 +3,8 @@ export type PropertySyntax =
     | { type: 'length' }
     | { type: 'length-percentage' }
     | { type: 'number' }
-    | { type: 'color' }
+    // `keywords`: extra identifiers the property may hold instead of a color (returned as strings).
+    | { type: 'color'; keywords?: string[] }
     // Allowed values. Must not contain `none` or CSS-wide keywords: the keyword detector maps
     // values to animation names, and `none` there means "no animation", so a change to `none`
     // would go unnoticed.
@@ -60,7 +61,7 @@ export function cssSyntax(syntax: PropertySyntax): string {
         case 'number':
             return '<number>';
         case 'color':
-            return '<color>';
+            return syntax.keywords && syntax.keywords.length ? `<color> | ${syntax.keywords.join(' | ')}` : '<color>';
         case 'keyword':
             return syntax.values.join(' | ');
     }
