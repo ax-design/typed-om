@@ -1,5 +1,3 @@
-<h1 align="center">Typed OM</h1>
-
 <h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ax-design/typed-om/master/docs/logo-r.png">
