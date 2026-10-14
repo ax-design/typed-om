@@ -1,7 +1,14 @@
 <h1 align="center">Typed OM</h1>
 
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ax-design/typed-om/master/docs/logo-r.png">
+    <img src="https://raw.githubusercontent.com/ax-design/typed-om/master/docs/logo.png" alt="Ax Typed OM">
+  </picture>
+</h1>
+
 <p align="center">
-  Typed reads and change detection of CSS custom properties for Axiom Design System, with or without CSS Typed OM.
+  Typed reads and monitors CSS custom properties for Axiom Design System.
 </p>
 
 <p align="center">
