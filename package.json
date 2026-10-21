@@ -1,6 +1,6 @@
 {
   "name": "@ax-design/typed-om",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed reads and change detection for CSS custom properties, for browsers with or without CSS Typed OM and @property.",
   "keywords": [
     "css",

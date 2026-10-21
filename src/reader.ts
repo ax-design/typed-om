@@ -54,10 +54,13 @@ export class StyleReader {
 function parseFast(spec: PropertySpec, text: string): PropertyValue {
     switch (spec.syntax.type) {
         case 'length':
+            if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;
             return parseLength(text);
         case 'length-percentage':
+            if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;
             return parseLengthPercentage(text);
         case 'number':
+            if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;
             return parseNumber(text);
         case 'color':
             if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;

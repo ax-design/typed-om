@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber } from './parse.js';
-import { validateSchema } from './schema.js';
+import { cssSyntax, validateSchema } from './schema.js';
+import { StyleReader } from './reader.js';
 
 describe('parseLengthPercentage', () => {
     test('canonical forms', () => {
@@ -79,5 +80,44 @@ describe('skipWhen', () => {
                 { name: '--kind', syntax: { type: 'keyword', values: ['flat', 'arc'] }, initial: 'flat', inherits: false },
             ])
         ).toThrow();
+    });
+});
+
+describe('numeric keywords (union)', () => {
+    test('cssSyntax emits the union', () => {
+        expect(cssSyntax({ type: 'length', keywords: ['auto'] })).toBe('<length> | auto');
+        expect(cssSyntax({ type: 'length-percentage', keywords: ['auto', 'min-content'] })).toBe('<length-percentage> | auto | min-content');
+        expect(cssSyntax({ type: 'number', keywords: ['none'] })).toBe('<number> | none');
+        expect(cssSyntax({ type: 'length' })).toBe('<length>');
+        expect(cssSyntax({ type: 'number', keywords: [] })).toBe('<number>');
+    });
+
+    test('validateSchema rejects reserved and non-identifier keywords', () => {
+        expect(() => validateSchema([{ name: '--w', syntax: { type: 'length', keywords: ['auto', 'inherit'] }, initial: '0px', inherits: false }])).toThrow();
+        expect(() => validateSchema([{ name: '--w', syntax: { type: 'number', keywords: ['0'] }, initial: '0', inherits: false }])).toThrow();
+        expect(() => validateSchema([{ name: '--w', syntax: { type: 'length', keywords: ['auto'] }, initial: '0px', inherits: false }])).not.toThrow();
+        expect(() => validateSchema([{ name: '--w', syntax: { type: 'length-percentage', keywords: ['auto'] }, initial: '0px', inherits: false }])).not.toThrow();
+    });
+
+    test('reader returns a keyword verbatim and numbers still parse', () => {
+        const schema = [
+            { name: '--size', syntax: { type: 'length', keywords: ['auto'] }, initial: '0px', inherits: false },
+            { name: '--gap', syntax: { type: 'length-percentage', keywords: ['auto'] }, initial: '0px', inherits: false },
+            { name: '--opacity', syntax: { type: 'number' }, initial: '0', inherits: false },
+        ];
+        const reader = new StyleReader(schema);
+        const g = globalThis as { getComputedStyle?: unknown };
+        const original = g.getComputedStyle;
+        g.getComputedStyle = () => ({
+            getPropertyValue: (name: string) => (name === '--size' ? 'auto' : name === '--gap' ? '12px' : name === '--opacity' ? '0.5' : ''),
+        });
+        try {
+            const out = reader.read({} as Element, {} as Node);
+            expect(out[0]).toBe('auto');
+            expect(out[1]).toEqual({ px: 12, percent: 0 });
+            expect(out[2]).toBe(0.5);
+        } finally {
+            g.getComputedStyle = original;
+        }
     });
 });

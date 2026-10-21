@@ -1,8 +1,8 @@
 // Description of one custom property the caller wants to read and observe.
 export type PropertySyntax =
-    | { type: 'length' }
-    | { type: 'length-percentage' }
-    | { type: 'number' }
+    | { type: 'length'; keywords?: string[] }
+    | { type: 'length-percentage'; keywords?: string[] }
+    | { type: 'number'; keywords?: string[] }
     // `keywords`: extra identifiers the property may hold instead of a color (returned as strings).
     | { type: 'color'; keywords?: string[] }
     // Allowed values. CSS-wide keywords are rejected. `none` is allowed for existing APIs, but
@@ -37,6 +37,13 @@ export type PropertyValue = LengthPercentage | number | string | Rgba | null;
 
 const RESERVED = ['initial', 'inherit', 'unset', 'revert', 'revert-layer', 'default'];
 
+function checkKeywords(name: string, keywords: string[]): void {
+    for (const value of keywords) {
+        if (RESERVED.indexOf(value) >= 0) throw new Error(`${name}: keyword "${value}" cannot be observed`);
+        if (!/^-?[_a-zA-Z][_a-zA-Z0-9-]*$/.test(value)) throw new Error(`${name}: "${value}" is not an identifier`);
+    }
+}
+
 export function validateSchema(schema: PropertySpec[]): void {
     const seen: string[] = [];
     for (const spec of schema) {
@@ -45,10 +52,13 @@ export function validateSchema(schema: PropertySpec[]): void {
         }
         seen.push(spec.name);
         if (spec.name.indexOf('--') !== 0) throw new Error(`${spec.name} is not a custom property name`);
-        if (spec.syntax.type !== 'keyword') continue;
-        for (const value of spec.syntax.values) {
-            if (RESERVED.indexOf(value) >= 0) throw new Error(`${spec.name}: keyword "${value}" cannot be observed`);
-            if (!/^-?[_a-zA-Z][_a-zA-Z0-9-]*$/.test(value)) throw new Error(`${spec.name}: "${value}" is not an identifier`);
+        const syntax = spec.syntax;
+        if (syntax.type === 'keyword') {
+            checkKeywords(spec.name, syntax.values);
+        } else if (syntax.type !== 'color' && syntax.keywords) {
+            // Numeric types may hold a keyword instead of a value ("<length> | auto");
+            // validate them the same way as the keyword type. Color keywords stay unvalidated.
+            checkKeywords(spec.name, syntax.keywords);
         }
     }
 }
@@ -56,11 +66,11 @@ export function validateSchema(schema: PropertySpec[]): void {
 export function cssSyntax(syntax: PropertySyntax): string {
     switch (syntax.type) {
         case 'length':
-            return '<length>';
+            return syntax.keywords && syntax.keywords.length ? `<length> | ${syntax.keywords.join(' | ')}` : '<length>';
         case 'length-percentage':
-            return '<length-percentage>';
+            return syntax.keywords && syntax.keywords.length ? `<length-percentage> | ${syntax.keywords.join(' | ')}` : '<length-percentage>';
         case 'number':
-            return '<number>';
+            return syntax.keywords && syntax.keywords.length ? `<number> | ${syntax.keywords.join(' | ')}` : '<number>';
         case 'color':
             return syntax.keywords && syntax.keywords.length ? `<color> | ${syntax.keywords.join(' | ')}` : '<color>';
         case 'keyword':
