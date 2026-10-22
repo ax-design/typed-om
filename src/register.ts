@@ -1,3 +1,4 @@
+import { keywordMirrors } from './detector.js';
 import { cssSyntax } from './schema.js';
 import type { PropertySpec } from './schema.js';
 
@@ -30,6 +31,18 @@ export function registerProperties(schema: PropertySpec[]): Set<string> {
             // InvalidModificationError: already registered by an earlier copy.
             if (error && (error as Error).name === 'InvalidModificationError') registered.add(spec.name);
             else throw error;
+        }
+    }
+    // Numeric specs that may hold a keyword get a registered mirror with a pure numeric syntax,
+    // so the keyword is rejected at computed-value time and the numeric hash stays legal. The
+    // mirror is internal (never read by the reader) and its definition is derived from the
+    // permanent schema contract, so a re-registration by another copy is the same definition.
+    for (const m of keywordMirrors(schema)) {
+        try {
+            css.registerProperty!({ name: m.name, syntax: m.syntax, inherits: true, initialValue: m.initial });
+        } catch (error) {
+            // Already registered by an earlier copy with the identical definition.
+            if (!error || (error as Error).name !== 'InvalidModificationError') throw error;
         }
     }
     return registered;

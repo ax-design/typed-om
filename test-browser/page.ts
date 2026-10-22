@@ -120,11 +120,42 @@ async function skipSuite(checks: Check[]) {
     checks.push({ name: 'skipWhen reads once the gate opens', ok: binding.get('--s-depth') === 5, detail: String(binding.get('--s-depth')) });
 }
 
+async function keywordUnionSuite(checks: Check[]) {
+    // A numeric spec that may hold `auto` must not poison the numeric hash: the registered
+    // mirror rejects the keyword and falls back to zero, so the hash declaration stays legal
+    // and numeric changes (including value<->auto jumps) still fire onChange.
+    const schema = new StyleSchema([
+        { name: '--ku-len', syntax: { type: 'length', keywords: ['auto'] }, initial: 'auto', inherits: false, register: true },
+        { name: '--ku-num', syntax: { type: 'number' }, initial: '0', inherits: false, register: true },
+    ]);
+    const { host, root } = makeHost();
+    const binding = new StyleBinding(schema, host, root);
+    let changes = 0;
+    binding.observe(() => changes++);
+    await frames(3);
+
+    const detector = root.querySelector('.ax-typed-om-d0') as HTMLElement;
+    const origin = getComputedStyle(detector).transformOrigin;
+    checks.push({ name: 'keyword-union hash stays legal', ok: origin !== '0.5px 0.5px', detail: origin });
+
+    const expectChange = async (title: string, act: () => void) => {
+        changes = 0;
+        act();
+        await frames(3);
+        checks.push({ name: `keyword-union detect ${title}`, ok: changes >= 1, detail: `changes=${changes}` });
+    };
+    await expectChange('numeric', () => host.style.setProperty('--ku-len', '18px'));
+    await expectChange('value to auto', () => host.style.setProperty('--ku-len', 'auto'));
+    await expectChange('auto to value', () => host.style.setProperty('--ku-len', '9px'));
+    binding.unobserve();
+}
+
 async function run() {
     const checks: Check[] = [];
     await skipSuite(checks);
     await suite('t', false, checks);
     await suite('r', true, checks);
+    await keywordUnionSuite(checks);
     return { userAgent: navigator.userAgent, canRegister: typeof CSS !== 'undefined' && 'registerProperty' in CSS, checks };
 }
 

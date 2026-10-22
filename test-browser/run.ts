@@ -19,7 +19,10 @@ const url = `http://127.0.0.1:${server.port}/`;
 
 async function viaPlaywright(name: string) {
     const pw = (await import('playwright')) as any;
-    const browser = await pw[name].launch();
+    // AX_BROWSER_PATH points the run at a system build instead (playwright's bundled binary is
+    // missing libnspr4 on NixOS).
+    const executablePath = process.env.AX_BROWSER_PATH;
+    const browser = await pw[name].launch(executablePath ? { executablePath } : {});
     const page = await browser.newPage();
     await page.goto(url);
     await page.waitForFunction(() => (window as any).__result, null, { timeout: 60000 });

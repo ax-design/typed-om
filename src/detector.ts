@@ -35,6 +35,40 @@ function weight(i: number): string {
     return (1 + i * 0.0173).toFixed(4);
 }
 
+export interface KeywordMirror {
+    // Name of the registered mirror property, e.g. "--ax-typed-om-kw-m0".
+    name: string;
+    // The source custom property the mirror reflects.
+    property: string;
+    // Pure numeric syntax (no keywords) the mirror is registered with.
+    syntax: string;
+    // Zero initial value for that syntax.
+    initial: string;
+}
+
+// Numeric specs that may hold a keyword (e.g. "<length> | auto") would poison the numeric
+// calc() hash when the computed value is that keyword: calc(auto * 1.0000) is invalid and
+// invalidates the whole transform-origin / perspective-origin declaration. Give each such spec
+// a registered mirror with a pure numeric syntax: "auto" is rejected at computed-value time,
+// so the mirror falls back to its zero initial and the hash stays legal. Value<->keyword jumps
+// still move the hash (number -> 0), so changes keep firing.
+export function keywordMirrors(schema: PropertySpec[]): KeywordMirror[] {
+    const out: KeywordMirror[] = [];
+    let i = 0;
+    for (const spec of schema) {
+        const t = spec.syntax.type;
+        if (t !== 'length' && t !== 'length-percentage' && t !== 'number') continue;
+        if (!spec.syntax.keywords || !spec.syntax.keywords.length) continue;
+        out.push({
+            name: `--${PREFIX}-kw-m${i++}`,
+            property: spec.name,
+            syntax: t === 'number' ? '<number>' : t === 'length' ? '<length>' : '<length-percentage>',
+            initial: t === 'number' ? '0' : '0px',
+        });
+    }
+    return out;
+}
+
 export interface DetectorTemplate {
     css: string;
     elementCount: number;
@@ -46,7 +80,14 @@ export interface DetectorTemplate {
 // inherit them.
 export function buildDetector(schema: PropertySpec[], registered: Set<string> = new Set()): DetectorTemplate {
     const mirrors: string[] = [];
+    const kwMirrors: string[] = [];
+    const kwName: { [name: string]: string } = {};
+    for (const m of keywordMirrors(schema)) {
+        kwName[m.property] = m.name;
+        kwMirrors.push(`${m.name}: var(${m.property});`);
+    }
     const source = (spec: PropertySpec) => {
+        if (kwName[spec.name]) return kwName[spec.name];
         if (!registered.has(spec.name) || spec.inherits) return spec.name;
         const mirror = `--${PREFIX}-m${mirrors.length}`;
         mirrors.push(`${mirror}: var(${spec.name});`);
@@ -64,7 +105,11 @@ export function buildDetector(schema: PropertySpec[], registered: Set<string> = 
         const hashes = groups.map((group) =>
             `calc(${group
                 .map((spec, i) => {
-                    const v = `var(${source(spec)}, ${spec.initial})`;
+                    const src = source(spec);
+                    // The registered mirror always resolves to a number (keyword -> zero), so a
+                    // keyword-capable spec's fallback is zero rather than its (keyword) initial.
+                    const fallback = kwName[spec.name] ? (spec.syntax.type === 'number' ? '0' : '0px') : spec.initial;
+                    const v = `var(${src}, ${fallback})`;
                     return spec.syntax.type === 'number' ? `${v} * ${weight(i)}px` : `${v} * ${weight(i)}`;
                 })
                 .join(' + ')})`
@@ -106,9 +151,10 @@ export function buildDetector(schema: PropertySpec[], registered: Set<string> = 
         const transition = e.transitions.length ? ` transition: ${e.transitions.join(', ')};` : '';
         rules.push(`.${PREFIX}-d${i} { ${e.decls.join(' ')}${transition} }`);
     });
-    if (mirrors.length) {
-        rules.push(`:host { ${mirrors.join(' ')} }`);
-        rules.push(`slot { ${mirrors.map((m) => `${m.slice(0, m.indexOf(':'))}: initial;`).join(' ')} }`);
+    if (mirrors.length || kwMirrors.length) {
+        const all = [...mirrors, ...kwMirrors];
+        rules.push(`:host { ${all.join(' ')} }`);
+        rules.push(`slot { ${all.map((m) => `${m.slice(0, m.indexOf(':'))}: initial;`).join(' ')} }`);
     }
     rules.push(
         `.${PREFIX}-c { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: hidden; visibility: hidden; pointer-events: none; contain: strict; }`,
