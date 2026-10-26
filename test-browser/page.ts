@@ -150,12 +150,52 @@ async function keywordUnionSuite(checks: Check[]) {
     binding.unobserve();
 }
 
+async function timeSuite(register: boolean, checks: Check[]) {
+    const prefix = register ? 'tr' : 'tu';
+    const name = `--${prefix}-time`;
+    const label = register ? 'registered' : 'unregistered';
+    const schema = new StyleSchema([{ name, syntax: { type: 'time' }, initial: '50ms', inherits: true, register }]);
+    const { host, root } = makeHost();
+    const binding = new StyleBinding(schema, host, root);
+    const expectRead = (title: string, text: string | null, expected: number) => {
+        if (text === null) host.style.removeProperty(name);
+        else host.style.setProperty(name, text);
+        binding.read();
+        const got = binding.get(name);
+        checks.push({ name: `${label} read time ${title}`, ok: same(got, expected), detail: `${JSON.stringify(got)} slow=${binding.stats.slow}` });
+    };
+    expectRead('unset', null, 50);
+    expectRead('seconds', '0.2s', 200);
+    expectRead('milliseconds', '150ms', 150);
+    expectRead('zero', '0s', 0);
+    expectRead('calc', 'calc(100ms + 0.1s)', 200);
+    expectRead('invalid', 'bogus', 50);
+    expectRead('bare number', '200', 50);
+
+    // Observed through the registered time mirror, where registration exists.
+    let changes = 0;
+    binding.observe(() => changes++);
+    await frames(3);
+    changes = 0;
+    host.style.setProperty(name, '300ms');
+    await frames(3);
+    const observable = typeof CSS !== 'undefined' && 'registerProperty' in CSS;
+    checks.push({ name: `${label} detect time`, ok: observable ? changes >= 1 : true, detail: `changes=${changes}` });
+    changes = 0;
+    host.style.setProperty(name, '0.3s');
+    await frames(3);
+    checks.push({ name: `${label} detect same time`, ok: changes === 0, detail: `changes=${changes}` });
+    binding.unobserve();
+}
+
 async function run() {
     const checks: Check[] = [];
     await skipSuite(checks);
     await suite('t', false, checks);
     await suite('r', true, checks);
     await keywordUnionSuite(checks);
+    await timeSuite(false, checks);
+    await timeSuite(true, checks);
     return { userAgent: navigator.userAgent, canRegister: typeof CSS !== 'undefined' && 'registerProperty' in CSS, checks };
 }
 

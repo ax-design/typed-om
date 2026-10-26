@@ -54,9 +54,23 @@ binding.get('--my-color'); // [255, 0, 0, 1]
 binding.get('--my-mode'); // 'soft'
 ```
 
-Values in common forms (`12px`, `50%`, `calc(50% + 4px)`, `rgb()`, `#hex`, keywords) are parsed directly. Anything else (`calc(1em + 2px)`, `red`) goes through a hidden probe element, so the browser does the math.
+Values in common forms (`12px`, `50%`, `calc(50% + 4px)`, `rgb()`, `#hex`, `200ms`, `0.2s`, keywords) are parsed directly. Anything else (`calc(1em + 2px)`, `red`) goes through a hidden probe element, so the browser does the math.
 
 `register: true` registers the property with `CSS.registerProperty` where it exists, so your transitions on it interpolate. Where it does not exist, everything still works and transitions jump to the end value.
+
+### Times
+
+A `time` property holds a CSS `<time>` and reads as a number of milliseconds, whichever unit the author wrote:
+
+```javascript
+const schema = new StyleSchema([
+  { name: '--my-delay', syntax: { type: 'time' }, initial: '250ms', inherits: true, register: true },
+]);
+// --my-delay: 0.4s
+binding.get('--my-delay'); // 400
+```
+
+A bare number is not a time, as in CSS: `--my-delay: 400` keeps the initial value. `calc()` and other forms go through the probe like the other types.
 
 ### Watching changes
 
@@ -80,3 +94,5 @@ A property can be skipped when another property makes it irrelevant, which saves
 ## Browser support
 
 Typed OM works in browsers released since 2016 that support custom properties and Shadow DOM. Keyword values cannot be CSS-wide keywords (`initial`, `inherit` and so on), and changes of a keyword to `none` are not seen by the detector.
+
+The detector sees changes of a `time` property only where `CSS.registerProperty` exists (a time can only transition as a registered property). Elsewhere `read()` still gives the right value: read again when you know it may have changed.

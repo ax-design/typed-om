@@ -1,4 +1,4 @@
-import { parseColor } from './parse.js';
+import { parseColor, parseTime } from './parse.js';
 import type { LengthPercentage, Rgba } from './schema.js';
 
 // Slow path for values the fast parsers cannot read (unregistered `calc(1em + 2px)`, named
@@ -48,6 +48,7 @@ function withProbe<T>(parent: Node, read: (p: Probe) => T): T {
         probe.narrow.style.marginLeft = '';
         probe.wide.style.marginLeft = '';
         probe.narrow.style.color = '';
+        probe.narrow.style.transitionDelay = '';
     }
 }
 
@@ -75,5 +76,17 @@ export function probeColor(parent: Node, name: string): Rgba | null {
         const text = getComputedStyle(p.narrow).color;
         const sentinel = getComputedStyle(p.root).color;
         return text === sentinel ? null : parseColor(text);
+    });
+}
+
+// A time in ms, or null when the value is not a valid time. transition-delay is not inherited,
+// so an invalid value would read as its initial 0s, the same as a real 0s. The second entry of
+// the list tells them apart: an invalid var() invalidates the whole declaration, which leaves
+// one entry instead of two. Negative delays are valid, so negative times read back too.
+export function probeTime(parent: Node, name: string): number | null {
+    return withProbe(parent, (p) => {
+        p.narrow.style.transitionDelay = `var(${name}), 0s`;
+        const list = getComputedStyle(p.narrow).transitionDelay.split(',');
+        return list.length === 2 ? parseTime(list[0].trim()) : null;
     });
 }

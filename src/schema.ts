@@ -3,6 +3,8 @@ export type PropertySyntax =
     | { type: 'length'; keywords?: string[] }
     | { type: 'length-percentage'; keywords?: string[] }
     | { type: 'number'; keywords?: string[] }
+    // A CSS <time>, read as a number of milliseconds ("0.2s" and "200ms" are both 200).
+    | { type: 'time' }
     // `keywords`: extra identifiers the property may hold instead of a color (returned as strings).
     | { type: 'color'; keywords?: string[] }
     // Allowed values. CSS-wide keywords are rejected. `none` is allowed for existing APIs, but
@@ -55,7 +57,7 @@ export function validateSchema(schema: PropertySpec[]): void {
         const syntax = spec.syntax;
         if (syntax.type === 'keyword') {
             checkKeywords(spec.name, syntax.values);
-        } else if (syntax.type !== 'color' && syntax.keywords) {
+        } else if (syntax.type !== 'color' && syntax.type !== 'time' && syntax.keywords) {
             // Numeric types may hold a keyword instead of a value ("<length> | auto");
             // validate them the same way as the keyword type. Color keywords stay unvalidated.
             checkKeywords(spec.name, syntax.keywords);
@@ -71,6 +73,8 @@ export function cssSyntax(syntax: PropertySyntax): string {
             return syntax.keywords && syntax.keywords.length ? `<length-percentage> | ${syntax.keywords.join(' | ')}` : '<length-percentage>';
         case 'number':
             return syntax.keywords && syntax.keywords.length ? `<number> | ${syntax.keywords.join(' | ')}` : '<number>';
+        case 'time':
+            return '<time>';
         case 'color':
             return syntax.keywords && syntax.keywords.length ? `<color> | ${syntax.keywords.join(' | ')}` : '<color>';
         case 'keyword':

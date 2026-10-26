@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { buildDetector, keywordMirrors } from './detector.js';
+import { buildDetector, keywordMirrors, timeMirrors } from './detector.js';
 import type { PropertySpec } from './schema.js';
 
 describe('keywordMirrors', () => {
@@ -39,5 +39,35 @@ describe('buildDetector keyword mirror', () => {
         const css = buildDetector(schema).css;
         expect(css).toContain('var(--plain, 0px)');
         expect(css).not.toContain('kw-m');
+    });
+});
+
+describe('time mirrors', () => {
+    const schema: PropertySpec[] = [
+        { name: '--n', syntax: { type: 'number' }, initial: '0', inherits: true, register: true },
+        { name: '--a', syntax: { type: 'time' }, initial: '50ms', inherits: true, register: true },
+        { name: '--b', syntax: { type: 'time' }, initial: '0s', inherits: false, register: true },
+    ];
+
+    test('one mirror per time spec, numbered among the times', () => {
+        expect(timeMirrors(schema)).toEqual([
+            { name: '--ax-typed-om-t0', property: '--a' },
+            { name: '--ax-typed-om-t1', property: '--b' },
+        ]);
+    });
+
+    test('registered mirrors transition; times stay out of the numeric hash', () => {
+        const css = buildDetector(schema, new Set(['--a', '--b', '--ax-typed-om-t0', '--ax-typed-om-t1'])).css;
+        expect(css).toContain('--ax-typed-om-t0: var(--a, 50ms);');
+        // A registered non-inherited time reaches the detector through the host mirror.
+        expect(css).toMatch(/--ax-typed-om-t1: var\(--ax-typed-om-m\d+, 0s\);/);
+        expect(css).toContain('--ax-typed-om-t0 1ms');
+        expect(css).not.toContain('var(--a, 50ms) *');
+    });
+
+    test('without registration times are not observed', () => {
+        const css = buildDetector(schema).css;
+        expect(css).not.toContain('--ax-typed-om-t0');
+        expect(css).toContain('transform-origin');
     });
 });

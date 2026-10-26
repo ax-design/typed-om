@@ -1,5 +1,5 @@
-import { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber } from './parse.js';
-import { probeColor, probeLengthPercentage, probeNumber } from './probe.js';
+import { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber, parseTime } from './parse.js';
+import { probeColor, probeLengthPercentage, probeNumber, probeTime } from './probe.js';
 import type { PropertySpec, PropertyValue } from './schema.js';
 
 export interface ReadStats {
@@ -62,6 +62,8 @@ function parseFast(spec: PropertySpec, text: string): PropertyValue {
         case 'number':
             if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;
             return parseNumber(text);
+        case 'time':
+            return parseTime(text);
         case 'color':
             if (spec.syntax.keywords && spec.syntax.keywords.indexOf(text) >= 0) return text;
             return parseColor(text);
@@ -78,6 +80,8 @@ function parseSlow(spec: PropertySpec, parent: Node): PropertyValue {
             return probeLengthPercentage(parent, spec.name);
         case 'number':
             return probeNumber(parent, spec.name);
+        case 'time':
+            return probeTime(parent, spec.name);
         case 'color':
             return probeColor(parent, spec.name);
         case 'keyword':

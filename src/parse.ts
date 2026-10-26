@@ -35,6 +35,17 @@ export function parseLength(text: string): number | null {
     return m && m[2] === 'px' ? parseFloat(m[1]) : null;
 }
 
+const TIME = new RegExp(`^(${NUMBER})(ms|s)$`);
+
+// A <time> in ms. Engines serialize computed times in seconds ("0.05s"); an unregistered value
+// comes back as written, in either unit. A bare number is not a time, as in CSS.
+export function parseTime(text: string): number | null {
+    const m = TIME.exec(text);
+    if (!m) return null;
+    const v = parseFloat(m[1]);
+    return m[2] === 's' ? v * 1000 : v;
+}
+
 export function parseKeyword(text: string, values: string[]): string | null {
     return values.indexOf(text) >= 0 ? text : null;
 }

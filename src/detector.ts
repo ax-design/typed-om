@@ -6,7 +6,10 @@ import type { PropertySpec } from './schema.js';
 //  - numeric values: folded into up to four weighted calc() hashes, placed in the x and y of
 //    transform-origin and perspective-origin (neither triggers layout), 1ms transitions;
 //  - colors: one real color property each, 1ms transitions;
-//  - keywords: an animation-name list with shadow-scoped empty @keyframes per allowed value.
+//  - keywords: an animation-name list with shadow-scoped empty @keyframes per allowed value;
+//  - times: one registered <time> mirror each, 1ms transitions. A time cannot enter the numeric
+//    hash (calc() multiplies a time by numbers only), and only a registered custom property
+//    interpolates a time, so times are observed where CSS.registerProperty exists.
 // Any transition or animation start marks the host as changed.
 
 const HASH_SLOTS = 4;
@@ -69,6 +72,19 @@ export function keywordMirrors(schema: PropertySpec[]): KeywordMirror[] {
     return out;
 }
 
+export interface TimeMirror {
+    // Name of the registered <time> mirror on the detector element, e.g. "--ax-typed-om-t0".
+    name: string;
+    // The source custom property the mirror reflects.
+    property: string;
+}
+
+// One registered <time> mirror per time spec, named by its position among the time specs. The
+// definition is the same for every schema (<time>, not inherited, 0s), so schemas share the names.
+export function timeMirrors(schema: PropertySpec[]): TimeMirror[] {
+    return schema.filter((spec) => spec.syntax.type === 'time').map((spec, i) => ({ name: `--${PREFIX}-t${i}`, property: spec.name }));
+}
+
 export interface DetectorTemplate {
     css: string;
     elementCount: number;
@@ -77,7 +93,7 @@ export interface DetectorTemplate {
 // `registered` lists the properties registered by name. A registered non-inherited property
 // does not reach the detector element inside the shadow root, so the host mirrors it into an
 // unregistered (inherited) property. The slot resets the mirrors so author content does not
-// inherit them.
+// inherit them. Time specs are observed only when their time mirror is in `registered`.
 export function buildDetector(schema: PropertySpec[], registered: Set<string> = new Set()): DetectorTemplate {
     const mirrors: string[] = [];
     const kwMirrors: string[] = [];
@@ -133,6 +149,13 @@ export function buildDetector(schema: PropertySpec[], registered: Set<string> = 
             e.transitions.push(`${COLOR_PROPERTIES[i]} 1ms`);
         });
     });
+
+    for (const m of timeMirrors(schema)) {
+        if (!registered.has(m.name)) continue;
+        const spec = schema.filter((s) => s.name === m.property)[0];
+        elements[0].decls.push(`${m.name}: var(${source(spec)}, ${spec.initial});`);
+        elements[0].transitions.push(`${m.name} 1ms`);
+    }
 
     const rules: string[] = [];
     const keywords = schema.filter((s) => s.syntax.type === 'keyword');

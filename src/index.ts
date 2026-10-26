@@ -1,8 +1,8 @@
 export { StyleBinding, StyleSchema } from './binding.js';
 export { attachDetector, buildDetector } from './detector.js';
 export type { DetectorHandle, DetectorTemplate } from './detector.js';
-export { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber } from './parse.js';
-export { probeColor, probeLengthPercentage, probeNumber } from './probe.js';
+export { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber, parseTime } from './parse.js';
+export { probeColor, probeLengthPercentage, probeNumber, probeTime } from './probe.js';
 export { StyleReader } from './reader.js';
 export type { ReadStats } from './reader.js';
 export { canRegister, registerProperties } from './register.js';

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber } from './parse.js';
+import { parseColor, parseKeyword, parseLength, parseLengthPercentage, parseNumber, parseTime } from './parse.js';
 import { cssSyntax, validateSchema } from './schema.js';
 import { StyleReader } from './reader.js';
 
@@ -38,6 +38,23 @@ describe('parseNumber', () => {
         expect(parseNumber('.5')).toBe(0.5);
         expect(parseNumber('1px')).toBeNull();
         expect(parseNumber('calc(1 / 2)')).toBeNull();
+    });
+});
+
+describe('parseTime', () => {
+    test('seconds and milliseconds, in ms', () => {
+        expect(parseTime('0.05s')).toBe(50);
+        expect(parseTime('200ms')).toBe(200);
+        expect(parseTime('3s')).toBe(3000);
+        expect(parseTime('0s')).toBe(0);
+        expect(parseTime('-1.5s')).toBe(-1500);
+        expect(parseTime('.5s')).toBe(500);
+    });
+
+    test('everything else goes to the probe', () => {
+        for (const text of ['0', '200', 'calc(1s + 2ms)', '1min', '2px', 'auto', '']) {
+            expect(parseTime(text)).toBeNull();
+        }
     });
 });
 
@@ -90,6 +107,7 @@ describe('numeric keywords (union)', () => {
         expect(cssSyntax({ type: 'number', keywords: ['none'] })).toBe('<number> | none');
         expect(cssSyntax({ type: 'length' })).toBe('<length>');
         expect(cssSyntax({ type: 'number', keywords: [] })).toBe('<number>');
+        expect(cssSyntax({ type: 'time' })).toBe('<time>');
     });
 
     test('validateSchema rejects reserved and non-identifier keywords', () => {
@@ -116,6 +134,25 @@ describe('numeric keywords (union)', () => {
             expect(out[0]).toBe('auto');
             expect(out[1]).toEqual({ px: 12, percent: 0 });
             expect(out[2]).toBe(0.5);
+        } finally {
+            g.getComputedStyle = original;
+        }
+    });
+});
+
+describe('time', () => {
+    test('reader returns ms and keeps the initial for an unknown value', () => {
+        const reader = new StyleReader([
+            { name: '--wait', syntax: { type: 'time' }, initial: '50ms', inherits: true },
+            { name: '--pause', syntax: { type: 'time' }, initial: '1s', inherits: true },
+        ]);
+        const g = globalThis as { getComputedStyle?: unknown };
+        const original = g.getComputedStyle;
+        g.getComputedStyle = () => ({ getPropertyValue: (name: string) => (name === '--wait' ? '0.2s' : '') });
+        try {
+            const out = reader.read({} as Element, {} as Node);
+            expect(out[0]).toBe(200);
+            expect(out[1]).toBe(1000);
         } finally {
             g.getComputedStyle = original;
         }

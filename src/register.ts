@@ -1,4 +1,4 @@
-import { keywordMirrors } from './detector.js';
+import { keywordMirrors, timeMirrors } from './detector.js';
 import { cssSyntax } from './schema.js';
 import type { PropertySpec } from './schema.js';
 
@@ -17,7 +17,8 @@ export function canRegister(): boolean {
 
 // Registers the properties that ask for it. Returns the names that are registered after the
 // call, including ones another copy of the package registered before (first registration
-// wins, so definitions must never change between versions).
+// wins, so definitions must never change between versions), and the time mirrors of the
+// detector (see timeMirrors).
 export function registerProperties(schema: PropertySpec[]): Set<string> {
     const registered = new Set<string>();
     if (!canRegister()) return registered;
@@ -43,6 +44,17 @@ export function registerProperties(schema: PropertySpec[]): Set<string> {
         } catch (error) {
             // Already registered by an earlier copy with the identical definition.
             if (!error || (error as Error).name !== 'InvalidModificationError') throw error;
+        }
+    }
+    // Time specs get a registered <time> mirror on the detector element, the only way to make a
+    // time transition (and so be observed). Same definition for every schema, like the above.
+    for (const m of timeMirrors(schema)) {
+        try {
+            css.registerProperty!({ name: m.name, syntax: '<time>', inherits: false, initialValue: '0s' });
+            registered.add(m.name);
+        } catch (error) {
+            if (error && (error as Error).name === 'InvalidModificationError') registered.add(m.name);
+            else throw error;
         }
     }
     return registered;
