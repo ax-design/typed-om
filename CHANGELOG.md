@@ -2,6 +2,10 @@
 
 All notable changes to this package are documented in this file.
 
+## 0.3.1
+
+- `registerProperties` asks the browser to register a name once. It asked for every property of every new schema and relied on the exception of a name that was registered already, which is an exception with a stack for each of them: some four hundred on a page whose components build their schemas as they appear. A name that this copy registered, or found registered by another one, is not asked again.
+
 ## 0.3.0
 
 - New `time` syntax (`{ type: 'time' }`, CSS `<time>`): read as a number of milliseconds from `ms` or `s`, through the probe for other forms, and observed by the detector where `CSS.registerProperty` exists. `parseTime` and `probeTime` are exported.
